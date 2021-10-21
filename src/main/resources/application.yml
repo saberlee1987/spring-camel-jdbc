@@ -1,0 +1,46 @@
+server:
+  port: 9000
+
+  compression:
+    enabled: true
+    min-response-size: 128000
+
+  jetty:
+    accesslog:
+      enabled: true
+    threads:
+      acceptors: 400
+      max: 4000
+      min: 400
+      selectors: 400
+  max-http-header-size: 128000
+
+
+spring:
+  main:
+    lazy-initialization: true
+    web-application-type: servlet
+
+
+camel:
+  springboot:
+    main-run-controller: true
+    name: ServiceRest
+  servlet:
+    mapping:
+      context-path: /camel/*
+  dataformat:
+    json-jackson:
+      object-mapper: mapper
+
+
+
+management:
+  endpoints:
+    web:
+      base-path: /actuators/student
+      exposure:
+        include: '*'
+    jmx:
+      exposure:
+        exclude: '*'
