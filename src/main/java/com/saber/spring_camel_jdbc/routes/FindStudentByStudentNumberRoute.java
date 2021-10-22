@@ -30,25 +30,33 @@ public class FindStudentByStudentNumberRoute extends AbstractRestRouteBuilder {
                 .enableCORS(true)
                 .route()
                 .routeId("findByStudentNumber-route")
-                .log("get all student from table ")
+                .to("direct:find-by-studentNumber-route")
+                .to("direct:find-student-by-studentNumber-response");
+
+        from("direct:find-by-studentNumber-route")
+                .log("find student by studentNumber  ===> ${in.header.studentNumber}  ")
                 .process(exchange -> {
-                    String studentNumber = exchange.getIn().getHeader("studentNumber",String.class);
+                    String studentNumber = exchange.getIn().getHeader(Headers.StudentNumber,String.class);
                    exchange.getIn().setBody(String.format("select * from students where studentNumber=%s", studentNumber));
                 })
-                .to("jdbc:studentDataSource")
-                .log("Response ====> ${in.body}")
+                .to("jdbc:studentDataSource");
+
+
+        from("direct:find-student-by-studentNumber-response")
+                .log("Response find-student-by-studentNumber ====> ${in.body}")
                 .marshal().json(JsonLibrary.Jackson)
                 .process(exchange -> {
                     String response = exchange.getIn().getBody(String.class);
-                    String studentNumber = exchange.getIn().getHeader("studentNumber",String.class);
+                    String studentNumber = exchange.getIn().getHeader(Headers.StudentNumber,String.class);
                     if (response.trim().equals("[ ]")){
-                        throw new ResourceNotFoundException(String.format("Student with studentNumber %s not found",studentNumber));
+                        throw new ResourceNotFoundException(String.format("Student with studentNumber %s not found",studentNumber) ,"/camel/student/findByStudentNumber");
                     }
                     response = String.format("{\"response\":%s}",response);
                     exchange.getIn().setBody(response);
                 })
-                .log("Response  studentResponse ====> ${in.body}")
+                .log("Response  find-student-by-studentNumber ====> ${in.body}")
                 .unmarshal().json(JsonLibrary.Jackson,StudentResponse.class)
+                .removeHeader(Headers.StudentNumber)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE,constant(200));
     }
 }

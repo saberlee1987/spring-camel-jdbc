@@ -9,7 +9,6 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
 import org.springframework.stereotype.Component;
-
 import javax.ws.rs.core.MediaType;
 
 @Component
@@ -19,6 +18,7 @@ public class FindStudentByNationalCodeRoute extends AbstractRestRouteBuilder {
     public void configure() throws Exception {
 
         super.configure();
+
         rest("/student")
                 .get("/findByNationalCode/{nationalCode}")
                 .id("findByNationalCode-route")
@@ -30,25 +30,33 @@ public class FindStudentByNationalCodeRoute extends AbstractRestRouteBuilder {
                 .enableCORS(true)
                 .route()
                 .routeId("findByNationalCode-route")
-                .log("get all student from table ")
+                .to("direct:find-by-nationalCode-route")
+                .to("direct:find-student-by-nationalCode-response");
+
+        from("direct:find-by-nationalCode-route")
+                .log("find student by nationalCode ===> ${in.header.nationalCode}")
                 .process(exchange -> {
-                    String nationalCode = exchange.getIn().getHeader("nationalCode",String.class);
-                   exchange.getIn().setBody(String.format("select * from students where nationalCode=%s", nationalCode));
+                    String nationalCode = exchange.getIn().getHeader(Headers.NationalCode, String.class);
+                    exchange.getIn().setBody(String.format("select * from students where nationalCode=%s", nationalCode));
                 })
-                .to("jdbc:studentDataSource")
-                .log("Response ====> ${in.body}")
+                .to("jdbc:studentDataSource");
+
+
+        from("direct:find-student-by-nationalCode-response")
+                .log("Response find-student-by-nationalCode ====> ${in.body}")
                 .marshal().json(JsonLibrary.Jackson)
                 .process(exchange -> {
-                    String nationalCode = exchange.getIn().getHeader("nationalCode",String.class);
+                    String nationalCode = exchange.getIn().getHeader(Headers.NationalCode, String.class);
                     String response = exchange.getIn().getBody(String.class);
-                    if (response.trim().equals("[ ]")){
-                       throw new ResourceNotFoundException(String.format("Student with nationalCode %s not found",nationalCode));
+                    if (response.trim().equals("[ ]")) {
+                        throw new ResourceNotFoundException(String.format("Student with nationalCode %s not found", nationalCode) ,"/camel/student/findByNationalCode");
                     }
-                    response = String.format("{\"response\":%s}",response);
+                    response = String.format("{\"response\":%s}", response);
                     exchange.getIn().setBody(response);
                 })
                 .log("Response  studentResponse ====> ${in.body}")
-                .unmarshal().json(JsonLibrary.Jackson,StudentResponse.class)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE,constant(200));
+                .unmarshal().json(JsonLibrary.Jackson, StudentResponse.class)
+                .removeHeader(Headers.NationalCode)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200));
     }
 }

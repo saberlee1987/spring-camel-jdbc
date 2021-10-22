@@ -2,13 +2,13 @@ package com.saber.spring_camel_jdbc.routes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.saber.spring_camel_jdbc.dto.ServiceErrorResponse;
+import com.saber.spring_camel_jdbc.exceptions.ResourceExistException;
 import com.saber.spring_camel_jdbc.exceptions.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
-
 import java.sql.SQLIntegrityConstraintViolationException;
 
 @Slf4j
@@ -52,6 +52,9 @@ public class AbstractRestRouteBuilder extends RouteBuilder {
                     exchange.getIn().setBody(errorResponse);
 
                 })
+                .removeHeader(Headers.Request_Body)
+                .removeHeader(Headers.NationalCode)
+                .removeHeader(Headers.StudentNumber)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(406));
 
 
@@ -64,6 +67,7 @@ public class AbstractRestRouteBuilder extends RouteBuilder {
                     String errorBody = exception.getMessage();
                     int errorCode = 406;
                     String sqlState = "406";
+                    String url = exception.getUrl();
 
 
                     ServiceErrorResponse errorResponse = new ServiceErrorResponse();
@@ -72,10 +76,42 @@ public class AbstractRestRouteBuilder extends RouteBuilder {
                     errorResponse.setOriginalMessage(String.format("{\"code\":%d,\"text\":\"%s\",\"sqlState\":\"%s\"}",
                             errorCode, errorBody, sqlState));
 
-                    log.error("Error when add to table ====> {}", mapper.writeValueAsString(errorResponse));
+                    log.error("Error for url {}  ====> {}",url, mapper.writeValueAsString(errorResponse));
                     exchange.getIn().setBody(errorResponse);
 
                 })
+                .removeHeader(Headers.Request_Body)
+                .removeHeader(Headers.NationalCode)
+                .removeHeader(Headers.StudentNumber)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(406));
+
+
+        onException(ResourceExistException.class)
+                .maximumRedeliveries(0)
+                .handled(true)
+                .process(exchange -> {
+                    ResourceExistException exception = exchange.getProperty(Exchange.EXCEPTION_CAUGHT,
+                            ResourceExistException.class);
+                    String errorBody = exception.getMessage();
+                    String url = exception.getUrl();
+                    int errorCode = 406;
+                    String sqlState = "406";
+
+
+                    ServiceErrorResponse errorResponse = new ServiceErrorResponse();
+                    errorResponse.setCode(2);
+                    errorResponse.setMessage("خطای سرویس students");
+                    errorResponse.setOriginalMessage(String.format("{\"code\":%d,\"text\":\"%s\",\"sqlState\":\"%s\"}",
+                            errorCode, errorBody, sqlState));
+
+                    log.error("Error for url {} nationalCode {} from table ====> {}",url,exchange.getIn().getHeader(Headers.NationalCode) ,
+                            mapper.writeValueAsString(errorResponse));
+                    exchange.getIn().setBody(errorResponse);
+
+                })
+                .removeHeader(Headers.Request_Body)
+                .removeHeader(Headers.NationalCode)
+                .removeHeader(Headers.StudentNumber)
                 .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(406));
     }
 }

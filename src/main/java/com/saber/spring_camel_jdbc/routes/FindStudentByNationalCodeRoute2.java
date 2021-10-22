@@ -32,27 +32,35 @@ public class FindStudentByNationalCodeRoute2 extends AbstractRestRouteBuilder {
                 .enableCORS(true)
                 .route()
                 .routeId("findByNationalCode2-route")
-                .log("get all student from table ")
+                .to("direct:find-by-nationalCode-route2")
+                .to("direct:find-student-by-nationalCode-response2");
+
+        from("direct:find-by-nationalCode-route2")
+                .log("find student by nationalCode 2 ===> ${in.header.nationalCode} ")
                 .process(exchange -> {
-                    String nationalCode = exchange.getIn().getHeader("nationalCode",String.class);
-                    Map<String,Object> map = new HashMap<>();
-                    map.put("nationalCode",nationalCode);
+                    String nationalCode = exchange.getIn().getHeader(Headers.NationalCode, String.class);
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("nationalCode", nationalCode);
                     exchange.getIn().setBody(map);
                 })
-                .to("sql:select * from students where nationalCode=:#nationalCode")
-                .log("Response ====> ${in.body}")
+                .to("sql:select * from students where nationalCode=:#nationalCode");
+
+
+        from("direct:find-student-by-nationalCode-response2")
+                .log("Response  find-student-by-nationalCode ====> ${in.body}")
                 .marshal().json(JsonLibrary.Jackson)
                 .process(exchange -> {
-                    String nationalCode = exchange.getIn().getHeader("nationalCode",String.class);
+                    String nationalCode = exchange.getIn().getHeader(Headers.NationalCode, String.class);
                     String response = exchange.getIn().getBody(String.class);
-                    if (response.trim().equals("[ ]")){
-                       throw new ResourceNotFoundException(String.format("Student with nationalCode %s not found",nationalCode));
+                    if (response.trim().equals("[ ]")) {
+                        throw new ResourceNotFoundException(String.format("Student with nationalCode %s not found", nationalCode) ,"/camel/student/findByNationalCode2");
                     }
-                    response = String.format("{\"response\":%s}",response);
+                    response = String.format("{\"response\":%s}", response);
                     exchange.getIn().setBody(response);
                 })
                 .log("Response  studentResponse ====> ${in.body}")
-                .unmarshal().json(JsonLibrary.Jackson,StudentResponse.class)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE,constant(200));
+                .unmarshal().json(JsonLibrary.Jackson, StudentResponse.class)
+                .removeHeader(Headers.NationalCode)
+                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(200));
     }
 }

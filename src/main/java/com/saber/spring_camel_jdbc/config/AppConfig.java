@@ -56,7 +56,7 @@ public class AppConfig {
     public PlatformTransactionManager transactionManager() throws PropertyVetoException {
         return new DataSourceTransactionManager(dataSource());
     }
-    @Bean
+    @Bean(name = "PROPAGATION_REQUIRED")
     public SpringTransactionPolicy propagationRequired(PlatformTransactionManager transactionManager){
         SpringTransactionPolicy transactionPolicy = new SpringTransactionPolicy();
         transactionPolicy.setTransactionManager(transactionManager);
