@@ -5,9 +5,12 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.mchange.v2.c3p0.ComboPooledDataSource;
+import org.apache.camel.component.sql.SqlComponent;
+import org.apache.camel.spring.spi.SpringTransactionPolicy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.PlatformTransactionManager;
 import java.beans.PropertyVetoException;
 
 @Configuration
@@ -48,5 +51,22 @@ public class AppConfig {
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_EMPTY);
         return objectMapper;
+    }
+    @Bean
+    public PlatformTransactionManager transactionManager() throws PropertyVetoException {
+        return new DataSourceTransactionManager(dataSource());
+    }
+    @Bean
+    public SpringTransactionPolicy propagationRequired(PlatformTransactionManager transactionManager){
+        SpringTransactionPolicy transactionPolicy = new SpringTransactionPolicy();
+        transactionPolicy.setTransactionManager(transactionManager);
+        transactionPolicy.setPropagationBehaviorName("PROPAGATION_REQUIRED");
+        return transactionPolicy;
+    }
+    @Bean
+    public SqlComponent sql() throws PropertyVetoException {
+        SqlComponent sql = new SqlComponent();
+        sql.setDataSource(dataSource());
+        return sql;
     }
 }

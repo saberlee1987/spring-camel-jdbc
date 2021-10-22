@@ -31,7 +31,9 @@ camel:
       context-path: /camel/*
   dataformat:
     json-jackson:
-      object-mapper: mapper
+#      object-mapper: mapper  ## when create bean objectMapper in spring Configuration
+      auto-discover-object-mapper: true
+      pretty-print: true
 
 
 
